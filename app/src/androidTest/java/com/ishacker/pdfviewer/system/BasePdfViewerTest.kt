@@ -3,7 +3,7 @@ package com.ishacker.pdfviewer.system
 import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import com.ishacker.pdfviewer.system.util.saveTo
+import com.rajat.pdfviewer.util.saveTo
 import java.io.File
 
 abstract class BasePdfViewerTest {
