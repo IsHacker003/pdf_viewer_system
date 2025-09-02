@@ -1,4 +1,4 @@
-package com.ishacker.pdfviewer.system
+package com.rajat.pdfviewer
 
 import android.content.Context
 import androidx.test.core.app.ActivityScenario

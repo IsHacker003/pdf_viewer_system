@@ -1,4 +1,4 @@
-package com.ishacker.pdfviewer.system
+package com.rajat.pdfviewer
 
 import android.graphics.drawable.ColorDrawable
 import android.view.View

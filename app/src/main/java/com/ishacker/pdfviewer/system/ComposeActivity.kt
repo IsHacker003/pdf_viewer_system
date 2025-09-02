@@ -14,9 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.ishacker.pdfviewer.system.PdfRendererView
-import com.ishacker.pdfviewer.system.compose.PdfRendererViewCompose
-import com.ishacker.pdfviewer.system.util.PdfSource
+import com.rajat.pdfviewer.PdfRendererView
+import com.rajat.pdfviewer.compose.PdfRendererViewCompose
+import com.rajat.pdfviewer.util.PdfSource
 import com.ishacker.pdfviewer.system.ui.theme.AndroidpdfviewerTheme
 import java.io.File
 

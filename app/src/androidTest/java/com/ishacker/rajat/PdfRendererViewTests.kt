@@ -1,4 +1,4 @@
-package com.ishacker.pdfviewer.system
+package com.rajat.pdfviewer
 
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
