@@ -1,4 +1,4 @@
-package com.rajat.sample.pdfviewer.ui.theme
+package com.ishacker.pdfviewer.system.ui.theme
 
 import android.app.Activity
 import android.os.Build

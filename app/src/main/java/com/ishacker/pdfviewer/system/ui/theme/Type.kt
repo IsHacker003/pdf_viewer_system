@@ -1,4 +1,4 @@
-package com.rajat.sample.pdfviewer.ui.theme
+package com.ishacker.pdfviewer.system.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

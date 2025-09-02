@@ -7,12 +7,12 @@ plugins {
 }
 
 android {
-    namespace = "com.rajat.sample.pdfviewer"
+    namespace = "com.ishacker.pdfviewer.system"
 
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.rajat.sample.pdfviewer"
+        applicationId = "com.ishacker.pdfviewer.system"
         minSdk = 23
         targetSdk = 35
         versionCode = 2

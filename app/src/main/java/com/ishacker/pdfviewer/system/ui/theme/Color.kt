@@ -1,4 +1,4 @@
-package com.rajat.sample.pdfviewer.ui.theme
+package com.ishacker.pdfviewer.system.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

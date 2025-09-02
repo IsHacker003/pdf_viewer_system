@@ -1,4 +1,4 @@
-package com.rajat.sample.pdfviewer
+package com.ishacker.pdfviewer.system
 
 import android.content.Intent
 import android.os.Bundle
@@ -8,12 +8,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
-import com.rajat.pdfviewer.PdfRendererView
-import com.rajat.pdfviewer.PdfViewerActivity
-import com.rajat.pdfviewer.util.CacheStrategy
-import com.rajat.pdfviewer.util.ToolbarTitleBehavior
-import com.rajat.pdfviewer.util.saveTo
-import com.rajat.sample.pdfviewer.databinding.ActivityMainBinding
+import com.ishacker.pdfviewer.system.PdfRendererView
+import com.ishacker.pdfviewer.system.PdfViewerActivity
+import com.ishacker.pdfviewer.system.util.CacheStrategy
+import com.ishacker.pdfviewer.system.util.ToolbarTitleBehavior
+import com.ishacker.pdfviewer.system.util.saveTo
+import com.ishacker.pdfviewer.system.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 

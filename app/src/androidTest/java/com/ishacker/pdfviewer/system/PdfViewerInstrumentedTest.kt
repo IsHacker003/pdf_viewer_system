@@ -1,4 +1,4 @@
-package com.rajat.pdfviewer
+package com.ishacker.pdfviewer.system
 
 import android.graphics.drawable.ColorDrawable
 import android.view.View
@@ -14,7 +14,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.LargeTest
-import com.rajat.pdfviewer.util.saveTo
+import com.ishacker.pdfviewer.system.util.saveTo
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue

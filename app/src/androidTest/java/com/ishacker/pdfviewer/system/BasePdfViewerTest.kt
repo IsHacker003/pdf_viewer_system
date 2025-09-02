@@ -1,9 +1,9 @@
-package com.rajat.pdfviewer
+package com.ishacker.pdfviewer.system
 
 import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import com.rajat.pdfviewer.util.saveTo
+import com.ishacker.pdfviewer.system.util.saveTo
 import java.io.File
 
 abstract class BasePdfViewerTest {
