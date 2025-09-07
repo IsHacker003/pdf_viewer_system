@@ -78,7 +78,7 @@
         android:layout_marginTop="8dp"/>
 
     <!-- PDF Viewer Section -->
-    <com.ishacker.pdfviewer.system.PdfRendererView
+    <com.rajat.pdfviewer.PdfRendererView
         android:id="@+id/pdfView"
         android:layout_width="0dp"
         android:layout_height="0dp"

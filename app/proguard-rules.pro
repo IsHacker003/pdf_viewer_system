@@ -19,3 +19,14 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-dontwarn com.rajat.pdfviewer.HeaderData
+-dontwarn com.rajat.pdfviewer.PdfRendererView$StatusCallBack
+-dontwarn com.rajat.pdfviewer.PdfRendererView$ZoomListener
+-dontwarn com.rajat.pdfviewer.PdfViewerActivity$Companion
+-dontwarn com.rajat.pdfviewer.compose.PdfRendererComposeKt
+-dontwarn com.rajat.pdfviewer.util.CacheStrategy
+-dontwarn com.rajat.pdfviewer.util.PdfSource$LocalUri
+-dontwarn com.rajat.pdfviewer.util.PdfSource$Remote
+-dontwarn com.rajat.pdfviewer.util.PdfSource
+-dontwarn com.rajat.pdfviewer.util.ToolbarTitleBehavior
+-dontwarn com.rajat.pdfviewer.util.saveTo

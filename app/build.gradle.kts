@@ -15,8 +15,8 @@ android {
         applicationId = "com.ishacker.pdfviewer.system"
         minSdk = 23
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 2
+        versionName = "1.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true

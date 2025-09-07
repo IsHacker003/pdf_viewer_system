@@ -1,4 +1,4 @@
-package com.ishacker.pdfviewer.system
+package com.rajat.pdfviewer
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
