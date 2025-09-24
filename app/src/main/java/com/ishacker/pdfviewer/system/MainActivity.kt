@@ -1,19 +1,18 @@
 package com.ishacker.pdfviewer.system
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
-import androidx.lifecycle.lifecycleScope
+import com.ishacker.pdfviewer.system.databinding.ActivityMainBinding
 import com.rajat.pdfviewer.PdfRendererView
 import com.rajat.pdfviewer.PdfViewerActivity
-import com.rajat.pdfviewer.util.CacheStrategy
-import com.rajat.pdfviewer.util.ToolbarTitleBehavior
 import com.rajat.pdfviewer.util.saveTo
-import com.ishacker.pdfviewer.system.databinding.ActivityMainBinding
+import java.io.File
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -106,7 +105,7 @@ class MainActivity : AppCompatActivity() {
     private val filePicker = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             result.data?.data?.let { uri ->
-                launchPdfFromUri(uri.toString())
+                launchPdfFromUri(uri)
             }
         }
     }
@@ -114,12 +113,13 @@ class MainActivity : AppCompatActivity() {
     /**
      * Launches a PDF file from a local URI.
      */
-    private fun launchPdfFromUri(uri: String) {
+    private fun launchPdfFromUri(uri: Uri) {
+        val fileName = File(uri.path).name
         startActivity(
             PdfViewerActivity.launchPdfFromPath(
                 context = this,
-                path = uri,
-                pdfTitle = uri,
+                path = uri.toString(),
+                pdfTitle = fileName,
                 saveTo = saveTo.ASK_EVERYTIME,
                 fromAssets = false
             )
