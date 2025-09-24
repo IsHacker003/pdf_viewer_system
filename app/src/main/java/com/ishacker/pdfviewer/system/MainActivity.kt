@@ -20,15 +20,6 @@ class MainActivity : AppCompatActivity() {
     // View Binding
     private lateinit var binding: ActivityMainBinding
 
-    // Sample PDF URLs
-    private val largePdf = "https://css4.pub/2015/usenix/example.pdf"
-    private val largePdf1 = "https://research.nhm.org/pdfs/10840/10840.pdf"
-    private val localPdf = "http://192.168.0.72:8001/pw.pdf"
-    private val newsletterPdf = "https://css4.pub/2017/newsletter/drylab.pdf"
-    private val textbookPdf = "https://css4.pub/2015/textbook/somatosensory.pdf"
-
-    private val pdfList = listOf(largePdf, largePdf1, newsletterPdf, textbookPdf)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -50,31 +41,9 @@ class MainActivity : AppCompatActivity() {
      * Sets up click listeners for the UI buttons.
      */
     private fun setupListeners() {
-        binding.onlinePdf.setOnClickListener {
-            setupPdfStatusListener()
-            launchPdfFromUrl(largePdf1)
-        }
 
         binding.pickPdfButton.setOnClickListener {
             launchFilePicker()
-        }
-
-        binding.fromAssets.setOnClickListener {
-            launchPdfFromAssets("quote.pdf")
-        }
-
-        binding.showInView.setOnClickListener {
-            setupPdfStatusListener()
-            binding.pdfView.initWithUrl(
-                url = largePdf,
-                lifecycleCoroutineScope = lifecycleScope,
-                lifecycle = lifecycle,
-                cacheStrategy = CacheStrategy.MINIMIZE_CACHE
-            )
-        }
-
-        binding.openInCompose.setOnClickListener {
-            startActivity(Intent(this, ComposeActivity::class.java))
         }
     }
 
@@ -121,24 +90,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Launches a PDF file from a URL.
-     */
-    private fun launchPdfFromUrl(url: String) {
-        Toast.makeText(this@MainActivity, "Opening PDF: $url", Toast.LENGTH_SHORT).show()
-        startActivity(
-            PdfViewerActivity.launchPdfFromUrl(
-                context = this,
-                pdfUrl = largePdf1,
-                pdfTitle = "PDF Title",
-                saveTo = saveTo.DOWNLOADS,
-                enableDownload = true,
-                toolbarTitleBehavior = ToolbarTitleBehavior.SINGLE_LINE_SCROLLABLE,
-                cacheStrategy = CacheStrategy.MAXIMIZE_PERFORMANCE
-            )
-        )
-    }
-
-    /**
      * Launches a file picker for selecting PDFs.
      */
     private fun launchFilePicker() {
@@ -168,24 +119,9 @@ class MainActivity : AppCompatActivity() {
             PdfViewerActivity.launchPdfFromPath(
                 context = this,
                 path = uri,
-                pdfTitle = "Title",
+                pdfTitle = uri,
                 saveTo = saveTo.ASK_EVERYTIME,
                 fromAssets = false
-            )
-        )
-    }
-
-    /**
-     * Launches a PDF file from assets.
-     */
-    private fun launchPdfFromAssets(uri: String) {
-        startActivity(
-            PdfViewerActivity.launchPdfFromPath(
-                context = this,
-                path = uri,
-                pdfTitle = "Title",
-                saveTo = saveTo.ASK_EVERYTIME,
-                fromAssets = true
             )
         )
     }
