@@ -3,7 +3,7 @@
     <!-- Main Light Theme -->
     <style name="Theme.MyApp" parent="Theme.Material3.Light">
         <!-- Primary Colors -->
-        <item name="colorPrimary">#6200EE</item> <!-- Material3 Default Indigo -->
+        <item name="colorPrimary">#181818</item>
         <item name="colorOnPrimary">#FFFFFF</item>
 
         <item name="colorSurface">#FFFFFF</item> <!-- White -->

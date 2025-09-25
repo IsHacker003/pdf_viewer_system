@@ -13,7 +13,7 @@
     <style name="actionBarTitleAppearance" parent="TextAppearance.AppCompat.Title">
         <item name="android:gravity">center</item>
         <item name="android:layout_gravity">center</item>
-        <item name="android:textColor">#FA3030</item>
+        <item name="android:textColor">#ffff</item>
         <item name="android:textSize">20sp</item>
     </style>
 
