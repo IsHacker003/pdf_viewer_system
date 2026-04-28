@@ -6,8 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.rememberNestedScrollInteropConnection
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -25,6 +27,7 @@ fun PdfRendererViewCompose(
     modifier: Modifier = Modifier,
     headers: HeaderData = HeaderData(),
     cacheStrategy: CacheStrategy = CacheStrategy.MAXIMIZE_PERFORMANCE,
+    maxZoomScale: Float = 3.0f,
     lifecycleOwner: LifecycleOwner = LocalLifecycleOwner.current,
     jumpToPage: Int? = null,
     statusCallBack: PdfRendererView.StatusCallBack? = null,
@@ -32,6 +35,7 @@ fun PdfRendererViewCompose(
     onReady: ((PdfRendererView) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val nestedScrollInterop = rememberNestedScrollInteropConnection()
     val pdfViewRef = remember { mutableStateOf<PdfRendererView?>(null) }
 
     // Async resolve asset file
@@ -83,12 +87,14 @@ fun PdfRendererViewCompose(
             PdfRendererView(ctx).also { view ->
                 view.statusListener = combinedCallback
                 view.zoomListener = zoomListener
+                view.setMaxZoomScale(maxZoomScale)
                 pdfViewRef.value = view
             }
         },
         update = { view ->
             view.statusListener = combinedCallback
             view.zoomListener = zoomListener
+            view.setMaxZoomScale(maxZoomScale)
 
             if (!hasInit) {
                 when {
@@ -117,6 +123,6 @@ fun PdfRendererViewCompose(
                 }
             }
         },
-        modifier = modifier
+        modifier = modifier.nestedScroll(nestedScrollInterop)
     )
 }

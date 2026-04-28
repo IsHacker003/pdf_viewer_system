@@ -1,5 +1,7 @@
 package com.rajat.pdfviewer
 
+import android.animation.Animator
+import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
@@ -36,13 +38,19 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
     private var lastTouchY = 0f
     private var posX = 0f
     private var posY = 0f
+    private var ignoreScaleAfterPointerUp = false
+    private var pinchStartScale = 1f
+    private var pinchStartSpan = 1f
+    private var pinchStartFocusX = 0f
+    private var pinchStartFocusY = 0f
+    private var pinchContentFocusX = 0f
+    private var pinchContentFocusY = 0f
+    private var multiPageScrollResidualY = 0f
+    private var blockPanUntilNextDown = false
 
     private var zoomChangeListener: ((Boolean, Float) -> Unit)? = null
+    private var zoomEndListener: ((Float) -> Unit)? = null
 
-    private var anchorScale = 1f
-    private var anchorFocusY = 0f
-    private var anchorContentY = 0f
-    private var anchorItemHeight = 0
 
     init {
         setWillNotDraw(false)
@@ -57,8 +65,28 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
 
     fun getZoomScale(): Float = scaleFactor
 
+    fun getMaxZoomScale(): Float = maxZoom
+
+    fun setMaxZoomScale(maxZoomScale: Float) {
+        maxZoom = maxZoomScale.coerceIn(1f, HARD_MAX_ZOOM)
+        if (scaleFactor > maxZoom) {
+            scaleFactor = maxZoom
+            clampPosition()
+            invalidate()
+            zoomChangeListener?.invoke(isZoomedIn(), scaleFactor)
+        }
+    }
+
     fun setOnZoomChangeListener(listener: (isZoomedIn: Boolean, scale: Float) -> Unit) {
         zoomChangeListener = listener
+    }
+
+    fun setOnZoomEndListener(listener: (scale: Float) -> Unit) {
+        zoomEndListener = listener
+    }
+
+    fun setOnZoomSettledListener(listener: (scale: Float) -> Unit) {
+        zoomEndListener = listener
     }
 
     /**
@@ -67,6 +95,10 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
     override fun onTouchEvent(ev: MotionEvent): Boolean {
         if (!isZoomEnabled) return super.onTouchEvent(ev)
 
+        if (ev.actionMasked == MotionEvent.ACTION_POINTER_UP) {
+            ignoreScaleAfterPointerUp = true
+        }
+
         gestureDetector.onTouchEvent(ev)
         scaleDetector.onTouchEvent(ev)
 
@@ -74,24 +106,42 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
             return true // Block RecyclerView scroll during zoom
         }
 
-        val superHandled = super.onTouchEvent(ev)
+        val superHandled = if (scaleFactor <= 1f) super.onTouchEvent(ev) else false
 
         when (ev.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                if (isVerticallyScrollable() || scaleFactor > 1f) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
+                multiPageScrollResidualY = 0f
+                blockPanUntilNextDown = false
                 lastTouchX = ev.x
                 lastTouchY = ev.y
                 activePointerId = ev.getPointerId(0)
             }
 
             MotionEvent.ACTION_MOVE -> {
+                if (isVerticallyScrollable() || scaleFactor > 1f) {
+                    parent?.requestDisallowInterceptTouchEvent(true)
+                }
                 if (!scaleDetector.isInProgress && scaleFactor > 1f) {
                     val pointerIndex = ev.findPointerIndex(activePointerId)
                     if (pointerIndex != -1) {
                         val x = ev.getX(pointerIndex)
                         val y = ev.getY(pointerIndex)
+                        if (blockPanUntilNextDown) {
+                            lastTouchX = x
+                            lastTouchY = y
+                            return superHandled || scaleFactor > 1f
+                        }
                         val dx = x - lastTouchX
+                        val dy = y - lastTouchY
                         posX += dx
-//                        posY += dy
+                        if (isSinglePage()) {
+                            posY += dy
+                        } else {
+                            applyMultiPageVisualOffsetDelta(-dy)
+                        }
                         clampPosition()
                         invalidate()
 
@@ -110,10 +160,23 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
                     lastTouchY = ev.getY(newPointerIndex)
                     activePointerId = ev.getPointerId(newPointerIndex)
                 }
+                blockPanUntilNextDown = true
             }
 
             MotionEvent.ACTION_CANCEL -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
                 activePointerId = INVALID_POINTER_ID
+                ignoreScaleAfterPointerUp = false
+                multiPageScrollResidualY = 0f
+                blockPanUntilNextDown = false
+            }
+
+            MotionEvent.ACTION_UP -> {
+                parent?.requestDisallowInterceptTouchEvent(false)
+                activePointerId = INVALID_POINTER_ID
+                ignoreScaleAfterPointerUp = false
+                multiPageScrollResidualY = 0f
+                blockPanUntilNextDown = false
             }
         }
 
@@ -145,40 +208,37 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
     }
 
     /**
-     * Allow vertical scroll only when zoomed in.
+     * Report vertical scrollability whenever the underlying document can move.
+     * Nested-scroll parents such as Compose bottom sheets rely on this signal to
+     * decide whether the PDF view should consume drag gestures.
      */
     override fun canScrollVertically(direction: Int): Boolean {
-        return scaleFactor > 1f && super.canScrollVertically(direction)
+        if (scaleFactor > 1f) {
+            if (!isSinglePage()) {
+                val hasBottomOverflowRoom = posY > -(height * (scaleFactor - 1f)).coerceAtLeast(0f)
+                return when {
+                    direction > 0 -> super.canScrollVertically(direction) || hasBottomOverflowRoom
+                    direction < 0 -> super.canScrollVertically(direction) || posY < 0f
+                    else -> super.canScrollVertically(1) || super.canScrollVertically(-1) || posY != 0f
+                }
+            }
+            return super.canScrollVertically(direction)
+        }
+        return !isSinglePage() && super.canScrollVertically(direction)
     }
 
     /**
      * Corrects scrollbar offset for zoom state.
      */
     override fun computeVerticalScrollOffset(): Int {
-        val layoutManager = layoutManager as? LinearLayoutManager ?: return 0
-        val firstVisible = layoutManager.findFirstVisibleItemPosition()
-        val firstView = layoutManager.findViewByPosition(firstVisible) ?: return 0
-
-        val scrolledPast = -layoutManager.getDecoratedTop(firstView)
-        val itemHeight = firstView.height.takeIf { it > 0 } ?: height
-        val offset = (firstVisible * itemHeight + scrolledPast)
-
-        return (offset * scaleFactor).toInt()
+        return (getBaseScrollOffset() * scaleFactor - posY).roundToInt()
     }
 
     /**
      * Corrects scrollbar range for zoom state.
      */
     override fun computeVerticalScrollRange(): Int {
-        val layoutManager = layoutManager as? LinearLayoutManager ?: return height
-        val itemCount = adapter?.itemCount ?: return height
-
-        val visibleHeights = (0 until layoutManager.childCount).mapNotNull {
-            layoutManager.getChildAt(it)?.height
-        }
-
-        val averageHeight = visibleHeights.average().takeIf { it > 0 } ?: height.toDouble()
-        return (averageHeight * itemCount * scaleFactor).toInt()
+        return (super.computeVerticalScrollRange() * scaleFactor).roundToInt()
     }
 
     /**
@@ -187,42 +247,39 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
     private inner class ScaleListener : ScaleGestureDetector.SimpleOnScaleGestureListener() {
         override fun onScaleBegin(detector: ScaleGestureDetector): Boolean {
             isZoomingInProgress = true
-            suppressLayout(true)
-
-
-            // 1️⃣ record the old scale & where on screen they touched
-            anchorScale  = scaleFactor
-            anchorFocusY = detector.focusY
-
-            // 2️⃣ convert current scroll into UN‑SCALED content‑pixels
-            val offsetDevicePx = computeVerticalScrollOffset()
-            val offsetContentPx = offsetDevicePx / anchorScale
-
-            // 3️⃣ record which page height to use
-            (layoutManager as? LinearLayoutManager)?.let { lm ->
-                val first = lm.findFirstVisibleItemPosition()
-                anchorItemHeight = lm.findViewByPosition(first)?.height ?: height
+            ignoreScaleAfterPointerUp = false
+            pinchStartScale = scaleFactor
+            pinchStartSpan = detector.currentSpan.takeIf { it > 0f } ?: 1f
+            pinchStartFocusX = detector.focusX
+            pinchStartFocusY = detector.focusY
+            multiPageScrollResidualY = 0f
+            pinchContentFocusX = (pinchStartFocusX - posX) / scaleFactor
+            pinchContentFocusY = if (isSinglePage()) {
+                (pinchStartFocusY - posY) / scaleFactor
+            } else {
+                (getCurrentMultiPageVisualOffset() + pinchStartFocusY) / scaleFactor
             }
-
-            // 4️⃣ now we have content‑pixel under fingers:
-            anchorContentY = offsetContentPx + anchorFocusY / anchorScale
-
+            suppressLayout(true)
             return true
         }
 
         override fun onScale(detector: ScaleGestureDetector): Boolean {
-            val scaleFactorChange = detector.scaleFactor
-            if (scaleFactorChange in 0.98f..1.02f) return true // ignore micro-changes
+            if (ignoreScaleAfterPointerUp) return true
+            val spanRatio = detector.currentSpan / pinchStartSpan
+            if (spanRatio in 0.98f..1.02f) return true // ignore micro-changes
 
-            val newScale = (scaleFactor * scaleFactorChange).coerceIn(1f, maxZoom)
+            val newScale = (pinchStartScale * spanRatio).coerceIn(1f, maxZoom)
             if (newScale != scaleFactor) {
-                val focusXInContent = (detector.focusX - posX) / scaleFactor
-                val focusYInContent = (detector.focusY - posY) / scaleFactor
-
                 scaleFactor = newScale
 
-                posX = detector.focusX - focusXInContent * scaleFactor
-                posY = detector.focusY - focusYInContent * scaleFactor
+                posX = pinchStartFocusX - pinchContentFocusX * scaleFactor
+                if (isSinglePage()) {
+                    posY = pinchStartFocusY - pinchContentFocusY * scaleFactor
+                } else {
+                    val desiredVisualOffset = pinchContentFocusY * scaleFactor - pinchStartFocusY
+                    val visualDelta = desiredVisualOffset - getCurrentMultiPageVisualOffset()
+                    applyMultiPageVisualOffsetDelta(visualDelta)
+                }
 
                 clampPosition()
                 invalidate()
@@ -236,28 +293,9 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
 
         override fun onScaleEnd(detector: ScaleGestureDetector) {
             isZoomingInProgress = false
-
+            ignoreScaleAfterPointerUp = false
             suppressLayout(false)
-
-
-            post {
-                // compute the NEW scroll offset (un‑scaled) so that
-                //    newOffsetContent + focusY/newScale == anchorContentY
-                val newScale = scaleFactor
-                val newOffsetContent = anchorContentY - anchorFocusY / newScale
-
-                // figure out which page & exact pixel
-                val page = (newOffsetContent / anchorItemHeight)
-                    .toInt()
-                    .coerceIn(0, (adapter?.itemCount ?: 1) - 1)
-                val offsetInPage = (newOffsetContent - page * anchorItemHeight).roundToInt()
-
-                // jump there exactly, then clear posY
-                (layoutManager as? LinearLayoutManager)
-                    ?.scrollToPositionWithOffset(page, -offsetInPage)
-                posY = 0f
-                invalidate()
-            }
+            zoomEndListener?.invoke(scaleFactor)
         }
 
 
@@ -281,9 +319,72 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
         val contentWidth = width * scaleFactor
         posX = posX.coerceIn(-(contentWidth - width).coerceAtLeast(0f), 0f)
 
-        // ▼ add vertical clamp ▼
-        val contentHeight = height * scaleFactor
-        posY = posY.coerceIn(-(contentHeight - height).coerceAtLeast(0f), 0f)
+        if (!isSinglePage()) {
+            val maxBottomOverflow = (height * (scaleFactor - 1f)).coerceAtLeast(0f)
+            posY = posY.coerceIn(-maxBottomOverflow, 0f)
+            return
+        }
+        val contentHeight = getSinglePageContentHeight()
+        val maxPosY = (contentHeight - height).coerceAtLeast(0f)
+        posY = posY.coerceIn(-maxPosY, maxPosY)
+    }
+
+    private fun getSinglePageContentHeight(): Float {
+        val childHeight = getChildAt(0)?.height ?: height
+        return childHeight * scaleFactor
+    }
+
+    private fun isVerticallyScrollable(): Boolean {
+        if (isSinglePage()) return false
+        return super.canScrollVertically(1) || super.canScrollVertically(-1)
+    }
+
+    private fun getCurrentMultiPageVisualOffset(): Float {
+        return getBaseScrollOffset() * scaleFactor - posY
+    }
+
+    private fun applyMultiPageVisualOffsetDelta(delta: Float) {
+        if (isSinglePage() || delta == 0f) return
+
+        var remainingDelta = delta
+
+        // If we are using bottom overflow and the gesture moves back upward, consume
+        // the overflow first before scrolling the list.
+        if (posY < 0f && remainingDelta < 0f) {
+            val overflowToConsume = minOf(-posY, -remainingDelta)
+            posY += overflowToConsume
+            remainingDelta += overflowToConsume
+        }
+
+        val desiredScrollDelta = remainingDelta + multiPageScrollResidualY
+        val requestedScroll = desiredScrollDelta.toInt()
+        if (requestedScroll != 0) {
+            val beforeOffset = getBaseScrollOffset()
+            scrollBy(0, requestedScroll)
+            val consumedScroll = (getBaseScrollOffset() - beforeOffset) * scaleFactor
+            multiPageScrollResidualY = desiredScrollDelta - consumedScroll
+        } else {
+            multiPageScrollResidualY = desiredScrollDelta
+        }
+
+        remainingDelta = 0f
+
+        // Any remaining positive delta means the list hit the bottom; store only
+        // that residual as overflow so the last page can still be fully explored.
+        if (multiPageScrollResidualY > 0f) {
+            posY -= multiPageScrollResidualY
+            multiPageScrollResidualY = 0f
+        } else if (multiPageScrollResidualY < 0f && !super.canScrollVertically(-1)) {
+            multiPageScrollResidualY = 0f
+        }
+    }
+
+    private fun getBaseScrollOffset(): Float {
+        return super.computeVerticalScrollOffset().toFloat()
+    }
+
+    private fun isSinglePage(): Boolean {
+        return (adapter?.itemCount ?: 0) <= 1
     }
 
 
@@ -303,40 +404,73 @@ class PinchZoomRecyclerView @JvmOverloads constructor(
             zoomTo(targetScale, e.x, e.y, zoomDuration)
             return true
         }
+    }
 
-        /**
-         * Animates a zoom operation centered on the provided focus point.
-         */
-        private fun zoomTo(targetScale: Float, focusX: Float, focusY: Float, duration: Long) {
-            val startScale = scaleFactor
-            val focusXInContent = (focusX - posX) / scaleFactor
-            val focusYInContent = (focusY - posY) / scaleFactor
+    /**
+     * Zooms in on the current content.
+     */
+    fun zoomIn() {
+        if (!isZoomEnabled) return
+        val targetScale = (scaleFactor + 0.5f).coerceAtMost(maxZoom)
+        zoomTo(targetScale, width / 2f, height / 2f, zoomDuration)
+    }
 
-            ValueAnimator.ofFloat(0f, 1f).apply {
-                this.duration = duration
-                interpolator = AccelerateDecelerateInterpolator()
-                addUpdateListener { animator ->
-                    val fraction = animator.animatedValue as Float
-                    val scale = startScale + (targetScale - startScale) * fraction
-                    scaleFactor = scale
+    /**
+     * Zooms out on the current content.
+     */
+    fun zoomOut() {
+        if (!isZoomEnabled) return
+        val targetScale = (scaleFactor - 0.5f).coerceAtLeast(1f)
+        zoomTo(targetScale, width / 2f, height / 2f, zoomDuration)
+    }
 
-                    posX = focusX - focusXInContent * scaleFactor
-                    posY = focusY - focusYInContent * scaleFactor
+    /**
+     * Resets the zoom level to 1.0.
+     */
+    fun resetZoom() {
+        if (!isZoomEnabled) return
+        zoomTo(1f, width / 2f, height / 2f, zoomDuration)
+    }
 
-                    clampPosition()
-                    invalidate()
-                    awakenScrollBars()
+    /**
+     * Animates a zoom operation centered on the provided focus point.
+     */
+    private fun zoomTo(targetScale: Float, focusX: Float, focusY: Float, duration: Long) {
+        val startScale = scaleFactor
+        val focusXInContent = (focusX - posX) / scaleFactor
+        val focusYInContent = (focusY - posY) / scaleFactor
 
-                    zoomChangeListener?.invoke(isZoomedIn(), scaleFactor)
-                }
-                start()
+        ValueAnimator.ofFloat(0f, 1f).apply {
+            this.duration = duration
+            interpolator = AccelerateDecelerateInterpolator()
+            addUpdateListener { animator ->
+                val fraction = animator.animatedValue as Float
+                val scale = startScale + (targetScale - startScale) * fraction
+                scaleFactor = scale
+
+                posX = focusX - focusXInContent * scaleFactor
+                posY = focusY - focusYInContent * scaleFactor
+
+                clampPosition()
+                invalidate()
+                awakenScrollBars()
+
+                zoomChangeListener?.invoke(isZoomedIn(), scaleFactor)
             }
+            addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        zoomEndListener?.invoke(scaleFactor)
+                    }
+                })
+                start()
+
         }
     }
 
     companion object {
         private const val INVALID_POINTER_ID = -1
         private const val MAX_ZOOM = 3.0f
+        private const val HARD_MAX_ZOOM = 5.0f
         private const val ZOOM_DURATION = 300L
     }
 }
