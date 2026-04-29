@@ -31,6 +31,7 @@ data class ToolbarStyle(
             TextViewCompat.setTextAppearance(titleView, R.style.pdfView_titleTextAppearance)
         }
 
+        /*
         titleView.apply {
             setSingleLine(titleBehavior.isSingleLine)
             maxLines = titleBehavior.maxLines
@@ -41,6 +42,7 @@ data class ToolbarStyle(
                 requestFocus()
             }
         }
+*/
     }
 
     companion object {
