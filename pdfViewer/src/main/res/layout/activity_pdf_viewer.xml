@@ -24,8 +24,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:ellipsize="end" 
-            android:maxLines="1"
-            android:singleLine="true"/>
+            android:maxLines="1"/>
     </com.google.android.material.appbar.MaterialToolbar>
 
 
