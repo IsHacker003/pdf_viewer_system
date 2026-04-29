@@ -9,14 +9,14 @@ plugins {
 android {
     namespace = "com.ishacker.pdfviewer.system"
 
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.ishacker.pdfviewer.system"
         minSdk = 23
-        targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        targetSdk = 36
+        versionCode = 3
+        versionName = "1.2"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
