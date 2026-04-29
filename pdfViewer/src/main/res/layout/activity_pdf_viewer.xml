@@ -18,7 +18,6 @@
         app:layout_scrollFlags="scroll|enterAlways"
         app:navigationIcon="@drawable/pdf_viewer_ic_arrow_back">
 
-        <!-- Custom TextView for Multi-Line Title -->
         <TextView
             android:id="@+id/toolbar_title"
             android:layout_width="match_parent"
